@@ -1,0 +1,682 @@
+<!doctype html>
+<html>
+<head>
+	<title>NinjaMan</title>
+	<style type="text/css">
+		*{
+			margin:0;
+			padding:0;
+			background-color: black;
+		}
+		
+		.row{
+			line-height: 0;
+			}
+		.board{
+			height: 60px;
+			display: inline-block;
+			background-color: black;
+			color: red;
+			font-weight: bold;
+			font-family:monospace,'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+			
+		}
+		.wall{
+			background-color:green;
+			height: 40px;
+			width: 40px;
+			display: inline-block;
+		}
+		.sushi{
+			background-color:rgb(214, 231, 214);
+			border-style: dotted;
+			border-width: 1px;			
+			height: 38px;
+			width: 38px;
+			display: inline-block;
+			background-image: url('img/sushi.png');
+			background-size: contain;
+		}
+		.onigiri{
+			background-color:rgb(214, 231, 214);
+			border-style: dotted;
+			border-width: 1px;
+			height: 38px;
+			width: 38px;
+			display: inline-block;
+			background-image: url('img/onigiri.png');
+			background-size: contain;
+		}		
+		.blank{
+			background-color:rgb(214, 231, 214);
+			border-style: dotted;
+			border-width: 1px;						
+			height: 38px;
+			width: 38px;
+			display: inline-block;
+		}
+		#ninjaman{
+			background-color:rgb(214, 231, 214);
+			visibility: hidden;
+			height: 38px;
+			width: 38px;
+			display: inline-block;
+			background-image: url('img/ninja.gif');
+			background-size: contain;
+			position:absolute;
+			left: 40px;
+			top:40px;
+			-webkit-transform: rotate(0deg);
+			/*transform: rotate(0dg);*/
+			/*animation-name: moveRight;*/
+			animation-duration: 1s;
+			animation-iteration-count:1;
+		}
+		@keyframes moveRight {
+			100%{
+				transform:translate(40px,0px);
+			}
+		}
+		@keyframes moveDown{
+			100%{
+				transform:translate(0px,40px);
+			}
+		}
+		.ghost{
+			height: 38px;
+			width: 38px;
+			display: inline-block;
+			background-size: contain;
+			position:absolute;
+			left: 320px;
+			top:320px;
+			background-color:rgb(214, 231, 214);	
+			background-image: url('img/pinky.gif');
+		}
+	</style>
+</head>
+<body>
+	<div id='world'></div>
+	<div id="startscreen"><img src="img/ninjatitle.jpg"></div>
+	<div id='ninjaman'></div>
+	<div id='ghosts'></div>
+	<div id='board' class='board'>Level: 1	Lives: 3		Score: 0 | 0</div>	
+	<audio id="nomSnd"><source src="img/172034__paulmorek__nom-a-02.wav" type="audio/wav"></audio>
+	<audio id="gameStartSnd"><source src="img/243020__plasterbrain__game-start.ogg" type="audio/ogg"> </audio>
+	<audio id="gameOverSnd"><source src="img/415096__wolderado__game-over.wav" type="audio/wav"> </audio>
+	<audio id="looseLifeSnd"><source src="img/270306__littlerobotsoundfactory__explosion-02.wav" type="audio/wav"> </audio>
+	<audio id="gainLifeSnd"><source src="img/431329__someguy22__8-bit-powerup.wav" type="audio/wav"> </audio>
+	<audio id="levelCompleteSnd"><source src="img/448266__henryrichard__sfx-clear.wav" type="audio/wav"> </audio>		
+</body>
+
+<script type="text/javascript">
+
+	var worldDict={
+		0:'blank',
+		1:'wall',
+		2:'sushi',
+		3:'onigiri',
+		blank:0,
+		wall:1,
+		sushi:2,
+		onigiri:3,
+		sushiPnts:10,
+		onigiriPnts:5
+	}
+
+	//these couple of functions are used in the world.generator
+	function copy2DArray(arr){
+		var NewArr=[[]];
+		//console.log('copy2d: '+arr.length+' x '+arr[0].length);
+		for (var row=0;row<arr.length;row++){
+			//console.log('row '+arr[row]);
+			NewArr[row]=[];
+			for (var col=0;col<arr[row].length;col++){
+				NewArr[row][col]=arr[row][col];
+			}
+		}
+		return NewArr;		
+	}
+
+	function check2dArrIsAllNum(arr,num){
+		for (var row=0;row<arr.length;row++){
+			for (var col=0;col<arr[row].length;col++){		
+				if (arr[row][col]!=num){
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	function floodfill(Amap,row,col,newVal){
+		//flood fill a 2d array, Amap with newVal starting at Amap[row][col]
+		if (Amap[row][col]==newVal){
+			return;
+		}else{
+			Amap[row][col]=newVal;
+			if (row<Amap.length-1){
+				floodfill(Amap,row+1,col,newVal);
+			}
+			if (row>0){
+				floodfill(Amap,row-1,col,newVal);
+			}
+			if (col<Amap.length-1){
+				floodfill(Amap,row,col+1,newVal);
+			}
+			if (col>0){
+				floodfill(Amap,row,col-1,newVal);
+			}
+		}
+	}
+
+	var world={
+		Level:1,
+		MaxScore:0,
+		size:7,
+		map:[[]],
+		generate: function(){
+			this.MaxScore=0;
+			//console.log(this.map);
+			this.map.length=this.size;
+			//start with solid block of wall
+			for (var row=0;row<this.size;row++){
+				this.map[row]=[];
+				for (var col=0;col<this.size;col++){
+					this.map[row][col]=(worldDict.wall);
+					//console.log(this.map[row][col]);
+				} 
+			}
+			//console.log(this.map);
+			ghosts.setStartPositions();
+			//toss in random holes (blanks, sushi, nigiri), but leave the outside perimiter intact
+			for (var row=1;row<this.size-1;row++){
+				for (var col=1;col<this.size-1;col++){
+					if (col==1&&row==1){
+						//This is where ninjaman starts, so it must be a blank.
+						this.map[1][1]=worldDict.blank;
+						continue;
+					}else {
+						var doContinue=false;
+						for (var idx=0;idx<ghosts.ghostList.length;idx++){
+							if(col==(ghosts.ghostList[idx].startX) && row==(ghosts.ghostList[idx].startY)){
+								//this is where a ghosty starts, so make it blank too.
+								console.log("ghost start:" +ghosts.ghostList[idx].name+', '+ ghosts.ghostList[idx].startX+','+ ghosts.ghostList[idx].startY);
+								this.map[row][col]=worldDict.blank;
+								doContinue=true;
+							}
+						}
+						if (doContinue){
+							continue;
+						}
+					}					
+					this.map[row][col]=Math.floor(Math.random()*4);
+					//console.log(this.map[row][col]);
+					//Calculate total available points for the level
+					if (this.map[row][col]==worldDict.sushi){
+						this.MaxScore+=worldDict.sushiPnts;
+					}
+					if (this.map[row][col]==worldDict.onigiri){
+						this.MaxScore+=worldDict.onigiriPnts;
+					}
+				}
+			}
+			//Now check for problems:  1. Inaccessable blocks and 2. inaccessable areas.
+			//Join any isolated (non-wall) blocks together
+			var lockedblock=true;
+			for (var row=1;row<this.size-1;row++){
+				for (var col=1;col<this.size-1;col++){
+					if (this.map[row][col]!=worldDict.wall){
+						lockedblock=true;
+						if (this.map[row+1][col]!=worldDict.wall){
+							lockedblock=false;
+						}
+						if (this.map[row-1][col]!=worldDict.wall){
+							lockedblock=false;
+						}
+						if (this.map[row][col+1]!=worldDict.wall){
+							lockedblock=false;
+						}
+						if (this.map[row][col-1]!=worldDict.wall){
+							lockedblock=false;
+						}
+						if (lockedblock){
+							if (Math.floor(Math.random()*2)==0){
+								if (col>this.size/2){
+									this.map[row][col-1]=worldDict.blank;
+								}else{
+									this.map[row][col+1]=worldDict.blank;
+								}
+							} else{
+								if (row>this.size/2){
+									this.map[row-1][col]=worldDict.blank;
+								}else{
+									this.map[row+1][col]=worldDict.blank;
+								}								
+							}
+						}
+					}
+				}
+			}
+			
+			//Check for isolated regions of the map:
+			//First, make a copy of the map array which we can make a mess of.
+			var checkmap=copy2DArray(this.map);
+			//console.log('checkmap after floodfill');
+
+			//Next, use a flood fill technique on an empty spot to make all regions a wall.
+			floodfill(checkmap,1,1,worldDict.wall);
+			
+			//if the fill worked, then there are no isolated regions.
+			if (check2dArrIsAllNum(checkmap,worldDict.wall)){
+				console.log('world Check ok.');
+			}else{
+				//if it failed, try generating a new world again.
+				//I know about the stack, but this shouldn't recur more than a few times.
+				console.log('world Check failed.  Regenerating.');
+				this.generate();
+			}	
+			this.draw();
+			var snd=document.getElementById('gameStartSnd');
+			snd.play();
+		},
+
+		draw: function(){
+			var output='';
+			for (var row=0;row<this.map.length;row++){
+				output+= "<div id='row"+row+"' class='row'>";
+				for(var col=0;col<this.map[row].length;col++){
+					output+="<div id='col"+col+"' class='"+worldDict[this.map[row][col]] +"'></div>";
+				}
+				output+="</div>";
+			}
+			document.getElementById('world').innerHTML=output;			
+		},
+		
+	}
+
+
+	var ninjaman={
+		X:1,
+		Y:1,
+		NewLifeScore:0,
+		LevelScore:0,
+		TotalScore:0,
+		Lives:3,
+		e:document.getElementById('ninjaman'),
+		nomSound:document.getElementById('nomSnd'),
+		gainLifeSnd:document.getElementById('gainLifeSnd'),
+		
+		LevelUp:function(){
+			this.X=1;
+			this.Y=1;
+			this.LevelScore=0;
+			//this.Lives++;
+			this.draw();
+		},
+		reset:function(){
+			this.e.style.visibility="visible";
+			this.X=1;
+			this.Y=1;
+			this.LevelScore=0;
+			this.TotalScore=0;
+			this.NewLifeScore=0;
+			this.Lives=3;
+			this.draw();
+		},
+		draw:function(){
+			this.e.style.top=this.Y*40+'px';
+			this.e.style.left=this.X*40+'px';
+			//console.log('drawNinjaman: '+this.X+', '+this.Y);
+		},
+		interact: function(x,y){
+			if (x!=this.X){
+				if (x>this.X){	//right
+					ninjaman.e.style.webkitTransform= 'rotateY(0deg)'; 	
+				} else{			//left
+					ninjaman.e.style.webkitTransform= 'rotateY(-180deg)';	
+				}
+			}
+			if (y!=this.Y){		
+				if (y>this.Y){	//down
+					ninjaman.e.style.webkitTransform= 'rotate(90deg)';
+				}else{			//up
+					ninjaman.e.style.webkitTransform= 'rotate(-90deg)';
+				}
+			}
+			
+			if (world.map[y][x]!=worldDict.wall){
+				//if new position is not a wall, we can move there
+				this.X=x;
+				this.Y=y;
+				this.draw();
+				if (ghosts.checkCollision()){
+					//if ghosty is sitting on a sushi and we move into ghosty, ninja can't get it.
+					return;
+				}
+				if (world.map[y][x]==worldDict.sushi){
+					//if new position contains sushi
+					this.nomSound.currentTime=0;
+					this.nomSound.play();
+					this.LevelScore+=worldDict.sushiPnts;
+					this.TotalScore+=worldDict.sushiPnts;
+					this.NewLifeScore+=worldDict.sushiPnts;
+					//Note: while the html is "class", the element property is called "className"!  Took me a while...
+					document.getElementById('row'+y).children[x].className='blank';
+					world.map[y][x]=0;
+					
+				}
+				if (world.map[y][x]==worldDict.onigiri){
+					//if new position contains onigiri
+					this.nomSound.currentTime=0;
+					this.nomSound.play();
+					this.LevelScore+=worldDict.onigiriPnts;
+					this.TotalScore+=worldDict.onigiriPnts;
+					this.NewLifeScore+=worldDict.onigiriPnts;
+					//Note: while the html is "class", the element property is called "className"!  Took me a while...
+					document.getElementById('row'+y).children[x].className='blank';
+					world.map[y][x]=0;
+				}
+				//How about an extra life per 100 pnts?
+				if (this.NewLifeScore>=100){
+					gainLifeSnd.play();
+					this.NewLifeScore=0;
+					this.Lives++;
+				}
+				//Update the scoreboard
+				if (this.LevelScore==world.MaxScore){
+					var snd=document.getElementById('levelCompleteSnd');
+					snd.play();
+					document.getElementById('board').innerText='Level: '+world.Level+'	Lives: '+this.Lives+' Score: '+this.TotalScore+' | '+this.LevelScore+'	\n!!!! LEVEL COMPLETE !!!\nPress SPACE to continue.';	
+				} else{
+					document.getElementById('board').innerText='Level: '+world.Level+'	Lives: '+this.Lives+' Score: '+this.TotalScore+' | '+this.LevelScore;
+				}
+			} else {
+				//console.log('wall');
+			}			
+		}
+	}
+
+	function Ghost(name){
+		this.name=name;
+		this.startX=world.size-2;
+		this.startY=world.size-2;
+		this.X=this.startX;
+		this.Y=this.startY;
+		this.speed=5;
+		this.moveX=0;
+		this.moveY=0;
+		this.IsChasing=false;
+		document.getElementById('ghosts').innerHTML+="<div id='"+this.name+"' class='ghost'></div>";
+		this.e=document.getElementById(this.name);
+		this.reset=function(){
+			console.log(name+"reset");
+			this.X=this.startX;
+			this.Y=this.startY;
+			this.speed=5;
+			this.moveX=0;
+			this.moveY=0;
+			this.IsChasing=false;
+			this.draw();
+		};
+		this.draw=function(){
+			this.e.style.top=this.Y*40+'px';
+			this.e.style.left=this.X*40+'px';
+			console.log(this.name+'ghost.draw: '+this.X+', '+this.Y);
+		};
+		this.interact=function(){
+			//Check if ninjaman was dumb enough to run into ghosty
+			if (this.checkCollision()){
+				return;
+			};
+			//console.log('ghost view');
+			var isChasing=false;
+
+			//If ghosty and ninjaman are on the same horizontal plane, then ghosty might see him.
+			if (this.Y==ninjaman.Y){
+				//console.log('same Y level');
+				//Look Right, from our position to the edge of the map.
+				for (var x=this.X+1;x<world.size;x++){
+					if (world.map[this.Y][x]==worldDict.wall){
+						//can't see through walls, so break.
+						break;
+					}else{
+						if(x==ninjaman.X){
+							//if we spot ninjaman in a spot we can see, move in that direction
+							isChasing=true;
+							this.moveX=1;
+							this.moveY=0;
+							break;
+						}
+					}
+				}
+				//Look Left from our position to the edge of the map.
+				for (var x=this.X-1;x>0;x--){
+					if (world.map[this.Y][x]==worldDict.wall){
+						//can't see through walls, so break.
+						break;
+					}else{
+						if(x==ninjaman.X){
+							//if we spot ninjaman in a spot we can see, move in that direction
+							isChasing=true;
+							this.moveX=-1;
+							this.moveY=0;
+							break;
+						}
+					}
+				}
+			} else if (this.X==ninjaman.X){
+				//If ghosty and ninjaman are on the same veritcal plane, then ghosty might see him
+				for (var y=this.Y+1;y<world.size;y++){
+					if (world.map[y][this.X]==worldDict.wall){
+						//can't see through walls, so break.
+						break;
+					} else {
+						if(y==ninjaman.Y){
+							//if we spot ninjaman in a spot we can see, move in that direction
+							isChasing=true;
+							this.moveX=0;
+							this.moveY=1;
+						}
+					}
+				}
+				for (var y=this.Y-1;y>0;y--){
+					if(world.map[y][this.X]==worldDict.wall){
+						//can't see through walls, so break.
+						break;
+					}else{
+						if(y==ninjaman.Y){
+							//if we spot ninjaman in a spot we can see, move in that direction
+							isChasing=true;
+							this.moveX=0;
+							this.moveY=-1;
+						}
+					}
+				}
+			}
+			//if we didn't see ninjaman, but we we're moving from when we did, ghosty will keep going (moveX and moveY have not bee updated).
+			//but we do want ghosty to stop if he hits a wall.
+			if (!isChasing){
+				if (this.moveY!=0){
+					if (world.map[this.Y+this.moveY][this.X]==worldDict.wall){
+						this.moveY=0;
+					}
+				}
+				if (this.moveX!=0){
+					if(world.map[this.Y][this.X+this.moveX]==worldDict.wall){
+						this.moveX=0;
+					}
+				}
+			}
+			//Update ghosty's position
+			this.X+=this.moveX;
+			this.Y+=this.moveY;
+			this.draw();
+			//Check if ghosty gets ninjaman
+			this.checkCollision();
+			if (this.IsChasing&&!isChasing){
+				console.log("Ninja!");
+			}
+			this.IsChasing=isChasing;
+		};
+		this.checkCollision= function(){
+			//if ghosty and ninjaman's position match, then ninja man looses a life and gets moved back to the start.
+			var result=false;
+			if (this.X==ninjaman.X&&this.Y==ninjaman.Y){
+				
+				ninjaman.Lives--;
+				result=true;
+				if (ninjaman.Lives<=0){
+					var snd=document.getElementById("gameOverSnd");
+					snd.play();
+					document.getElementById('board').innerText='Level: '+world.Level+'  Lives: '+ninjaman.Lives+' Score: '+ninjaman.TotalScore+' | '+ninjaman.LevelScore+'\n!!!!	G.A.M.E O.V.E.R	!!!\n Press SPACE to restart.';	
+				} else{
+					if (ninjaman.LevelScore==world.MaxScore){
+						//special condition when ninjaman moves to get the last sushi if it is next to ghosty (ghosty gets him on the his move).  Ninjaman looses a life but finishes the level.
+						document.getElementById('board').innerText='Level: '+world.Level+'	Lives: '+ninjaman.Lives+' Score: '+ninjaman.TotalScore+' | '+ninjaman.LevelScore+'	\n!!!! LEVEL COMPLETE (by Kamakazee) !!!\nPress SPACE to continue.';					
+					}else{
+						var snd=document.getElementById("looseLifeSnd");
+						snd.play();
+						document.getElementById('board').innerText='Level: '+world.Level+'	Lives: '+ninjaman.Lives+' Score: '+ninjaman.TotalScore+' | '+ninjaman.LevelScore;				
+						ninjaman.X=1;
+						ninjaman.Y=1;
+						ninjaman.draw();
+						//if the attacking ghost is too close to ninja man's restart position, then back him up, but don't put him in a wall.
+						while (this.X<3&&this.Y<3||world.map[this.Y][this.X]==worldDict.wall){
+							this.X++;
+							this.Y++;
+						}
+					}
+				}
+				
+			}
+			return result;
+		}
+	}
+
+	var ghosts={
+		ghostList:[],
+		add:function(name){
+			var Aghost=new Ghost(name);
+			this.ghostList.push(Aghost);
+			for (var idx=0;idx<this.ghostList.length;idx++){
+				this.ghostList[idx].e=document.getElementById(this.ghostList[idx].name);
+			}			
+			return Aghost;
+		},
+		interact: function(){
+			for (var idx=0;idx<this.ghostList.length;idx++){
+				this.ghostList[idx].interact();
+			}
+		},
+		draw: function(){
+			for (var idx=0;idx<this.ghostList.length;idx++){
+				this.ghostList[idx].draw();console.log("draw ghosts");
+			}
+		},
+		checkCollision: function(){
+			for (var idx=0;idx<this.ghostList.length;idx++){
+				if (this.ghostList[idx].checkCollision()){return true};
+			}
+			return false;
+		},
+		reset:function(){
+			for (var idx=0;idx<this.ghostList.length;idx++){
+				this.ghostList[idx].reset();
+			}
+		},
+		setStartPositions:function(){
+			//set ghosts' starting positions to random location in the world, but at least three squares away from ninjaman's 1,1 start position.
+			for (var idx=0;idx<this.ghostList.length;idx++){
+				var num=Math.random()*(world.size-4)+3;
+				this.ghostList[idx].startX=Math.floor(num);
+				num=Math.random()*(world.size-4)+3;
+				this.ghostList[idx].startY=Math.floor(num);
+				console.log("setStartPositions: "+this.ghostList[idx].name+', '+this.ghostList[idx].startX+', '+this.ghostList[idx].startY);
+			}
+		},
+		newGame:function(){
+			document.getElementById("ghosts").innerHTML="";
+			this.ghostList.length=0;
+			this.add("pinky");
+		}
+	}
+
+
+	function handlekey(key){
+		//console.log('key: pressed '+key.keyCode);
+		//This section to check if the level has ended and what to do next.
+		if (ninjaman.LevelScore==world.MaxScore||ninjaman.Lives<=0){
+			//ignore everything except SPACE
+			if (key.keyCode!=32){
+				return;
+			}
+			//if ninjaman got all the goodies, then the go to the next level
+			if (ninjaman.LevelScore==world.MaxScore){
+				world.size++;
+				world.Level++;
+				ninjaman.LevelUp();
+				if (world.Level==4){
+					ghosts.add("red");
+					ghosts.ghostList[1].e.style.backgroundImage="url('img/red.gif')";
+					ghosts.draw();
+				}
+				if (world.Level==6){
+					ghosts.add("pumpky");
+					ghosts.ghostList[2].e.style.backgroundImage="url('img/pumpky.gif')";
+					ghosts.draw();
+				}				
+				if (world.Level==9){
+					ghosts.add("bluey");
+					ghosts.ghostList[3].e.style.backgroundImage="url('img/bluey.gif')";
+					ghosts.draw();
+				}
+				if (world.Level==11){
+					//Finish the game?
+				}
+			} else {
+				//if ninjaman ran out of lives, game over.  Reset to defaults.
+				document.getElementById("startscreen").innerHTML="";
+				world.size=7;
+				world.Level=1;
+				ghosts.newGame();
+				ninjaman.reset();
+			}
+			world.generate();
+			ghosts.reset();
+		}
+		
+		//Get a key and move ninjaman
+		var newX=ninjaman.X;
+		var newY=ninjaman.Y;
+		switch (key.keyCode){
+			case 37:  //left
+				newX--;
+				break;
+			case 39://right
+				newX++;
+				break;
+			case 38://up
+				newY--;
+				break;
+			case 40://down
+				newY++;
+		}
+		ninjaman.interact(newX,newY);
+		ghosts.interact();
+	}
+	
+
+	//This is to make the the user press a key (space) to start a game to preven at DOM promise error.
+	//Seting ninjaman lives (=0) and world maxscore (!=0) this way will a trigger a new game to start from the key event handler when the user presses <space>.
+	ninjaman.Lives=0;
+	world.MaxScore=1;
+	document.getElementById('board').innerText='The Coding Dojo Presents: Ninjaman\n\nPress <space> to start.';				
+	document.onkeyup=handlekey;
+
+//keep score of how many sushis nijamin eats
+//sushi=10pts, onigiri=5pts
+//advanced challenge=random world
+//hacker challeges- create ghosts that chase ninjaman.
+</script>
+</html>
