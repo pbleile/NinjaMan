@@ -93,6 +93,28 @@
 			background-color:rgb(214, 231, 214);	
 			background-image: url('img/pinky.gif');
 		}
+
+		.pad-btn{
+			color:white;
+			width: 100px;
+			height: 100px;
+			font-size: 500%;
+		}
+		#up-btn{
+			margin-left: 50px;
+		}
+		#down-btn{
+			margin-left: 50px;
+		}
+
+		#start-btn{
+			display:inline-block;
+			height: 50px;
+			width: 100px;
+			border-radius: 10px;
+			color:white;
+			background-color: green;
+		}
 	</style>
 </head>
 <body>
@@ -100,7 +122,18 @@
 	<div id="startscreen"><img src="img/ninjatitle.jpg"></div>
 	<div id='ninjaman'></div>
 	<div id='ghosts'></div>
-	<div id='board' class='board'>Level: 1	Lives: 3		Score: 0 | 0</div>	
+	<!-- <div id='board' class='board'>Level: 1	Lives: 3		Score: 0 | 0</div>	 -->
+	<div id='board' class='board'>
+		<p> The Coding Dojo Presents: Ninjaman</p>
+		<button id="start-btn" onclick='key_pad(32);'>START</button>	
+		<p>Press &lt;space&gt; to start. </p>
+	</div>
+	<div id='control-pad'>
+		<button id="up-btn" keyCode="38" onclick="key_pad(38);" class="pad-btn">&#8593;</button><br>
+		<button id="left-btn" keyCode="37" onclick="key_pad(37);"  class="pad-btn">&#8592;</button>
+		<button id="right-btn" keyCode="39" onclick="key_pad(39);"  class="pad-btn">&#8594;</button><br>
+		<button id="down-btn" keyCode="40" onclick="key_pad(40);"  class="pad-btn">&#8595;</button>
+	</div>
 	<audio id="nomSnd"><source src="img/172034__paulmorek__nom-a-02.wav" type="audio/wav"></audio>
 	<audio id="gameStartSnd"><source src="img/243020__plasterbrain__game-start.ogg" type="audio/ogg"> </audio>
 	<audio id="gameOverSnd"><source src="img/415096__wolderado__game-over.wav" type="audio/wav"> </audio>
@@ -666,12 +699,17 @@
 		ghosts.interact();
 	}
 	
+	function key_pad(code){
+		//Translate the keypad button to the keyhandler call.
+		var key={keyCode:code}
+		handlekey(key);
+	}
 
-	//This is to make the the user press a key (space) to start a game to preven at DOM promise error.
+	//This is to make the the user press a key (space) to start a game to prevent a DOM promise error.
 	//Seting ninjaman lives (=0) and world maxscore (!=0) this way will a trigger a new game to start from the key event handler when the user presses <space>.
 	ninjaman.Lives=0;
 	world.MaxScore=1;
-	document.getElementById('board').innerText='The Coding Dojo Presents: Ninjaman\n\nPress <space> to start.';				
+	//document.getElementById('board').innerText='The Coding Dojo Presents: Ninjaman\n\nPress <space> to start.';				
 	document.onkeyup=handlekey;
 
 //keep score of how many sushis nijamin eats
