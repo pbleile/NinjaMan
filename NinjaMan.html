@@ -95,25 +95,25 @@
 		}
 
 		.pad-btn{
+			display: inline-block;
 			color:white;
 			width: 100px;
 			height: 100px;
 			font-size: 500%;
-		}
-		#up-btn{
-			margin-left: 50px;
-		}
-		#down-btn{
-			margin-left: 50px;
-		}
-
-		#start-btn{
-			display:inline-block;
-			height: 50px;
-			width: 100px;
 			border-radius: 10px;
-			color:white;
+			text-align: center;
+			background-color: darkslategray;
+		}
+		#up-btn, #down-btn{
+			margin-left: 104px;
+		}
+		#center{
+			font-size:100%;
 			background-color: green;
+			margin: 4px 0px 4px 0px;
+		}
+		#left-btn,#right-btn,#center{
+			vertical-align: middle;
 		}
 	</style>
 </head>
@@ -125,14 +125,20 @@
 	<!-- <div id='board' class='board'>Level: 1	Lives: 3		Score: 0 | 0</div>	 -->
 	<div id='board' class='board'>
 		<p> The Coding Dojo Presents: Ninjaman</p>
-		<button id="start-btn" onclick='key_pad(32);'>START</button>	
 		<p>Press &lt;space&gt; to start. </p>
 	</div>
 	<div id='control-pad'>
+		<div>
 		<button id="up-btn" keyCode="38" onclick="key_pad(38);" class="pad-btn">&#8593;</button><br>
-		<button id="left-btn" keyCode="37" onclick="key_pad(37);"  class="pad-btn">&#8592;</button>
-		<button id="right-btn" keyCode="39" onclick="key_pad(39);"  class="pad-btn">&#8594;</button><br>
+		</div>
+		<div>
+			<button id="left-btn" keyCode="37" onclick="key_pad(37);"  class="pad-btn">&#8592;</button>
+			<button id="center" keyCode="32" onclick="key_pad(32);" class="pad-btn">SPACE</button>
+			<button id="right-btn" keyCode="39" onclick="key_pad(39);"  class="pad-btn">&#8594;</button><br>
+		</div>
+		<div>
 		<button id="down-btn" keyCode="40" onclick="key_pad(40);"  class="pad-btn">&#8595;</button>
+	</div>
 	</div>
 	<audio id="nomSnd"><source src="img/172034__paulmorek__nom-a-02.wav" type="audio/wav"></audio>
 	<audio id="gameStartSnd"><source src="img/243020__plasterbrain__game-start.ogg" type="audio/ogg"> </audio>
